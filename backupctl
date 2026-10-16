@@ -1,0 +1,192 @@
+#!/usr/bin/env bash
+
+function backupctl::usage {
+    local error_msg="${1:-}"
+
+    if [[ -n "${error_msg}" ]]; then
+        echo "${error_msg}" >&2
+        echo >&2
+    fi
+
+    echo "Usage: backupctl <command> [options]"
+    echo
+    echo "Description:"
+    echo "  This script is used to create database and file backups for dedicated systems."
+    echo
+    echo "Commands:"
+    echo "  backup      Manually creates a backup from a backup target"
+    echo "  restore     Restores a backup from a backup target"
+    echo "  prune       Removes all created backups from this system on the remote storage"
+    echo "  snapshots   Lists all available versions from a backup target"
+    echo "  profiles    Lists all backup targets"
+    echo "  forget      Removes old versions from a backup target"
+    echo
+    echo "Options:"
+    echo "  -h, --help  Show this help"
+    echo
+    echo "Run 'backupctl <command> --help' for more information on a command."
+}
+
+function backupctl::usage::backup {
+    local error_msg="${1:-}"
+
+    if [[ -n "${error_msg}" ]]; then
+        echo "${error_msg}" >&2
+        echo >&2
+    fi
+
+    echo "Usage: backupctl backup [options] PROFILE"
+    echo "       backupctl backup [options] --all"
+    echo
+    echo "Description:"
+    echo "  Manually creates a backup from a backup target."
+    echo "  Either a single PROFILE or --all must be given."
+    echo
+    echo "Arguments:"
+    echo "  PROFILE      Name of the backup target to back up"
+    echo
+    echo "Options:"
+    echo "  --all        Back up all configured backup targets"
+    echo "  -h, --help   Show this help"
+}
+
+function backupctl::usage::restore {
+    local error_msg="${1:-}"
+
+    if [[ -n "${error_msg}" ]]; then
+        echo "${error_msg}" >&2
+        echo >&2
+    fi
+
+    echo "Usage: backupctl restore [options] PROFILE [SNAPSHOT]"
+    echo
+    echo "Description:"
+    echo "  Restores a backup from a backup target."
+    echo "  If no SNAPSHOT is given, the latest snapshot is restored."
+    echo
+    echo "Arguments:"
+    echo "  PROFILE      Name of the backup target to restore from"
+    echo "  SNAPSHOT     ID of the snapshot to restore (see 'backupctl snapshots')"
+    echo
+    echo "Options:"
+    echo "  --target DIR    Restore into DIR instead of the original location"
+    echo "  -y, --yes       Do not ask for confirmation"
+    echo "  -h, --help      Show this help"
+}
+
+function backupctl::usage::prune {
+    local error_msg="${1:-}"
+
+    if [[ -n "${error_msg}" ]]; then
+        echo "${error_msg}" >&2
+        echo >&2
+    fi
+
+    echo "Usage: backupctl prune [options]"
+    echo
+    echo "Description:"
+    echo "  Removes all created backups from this system on the remote storage."
+    echo "  This cannot be undone."
+    echo
+    echo "Options:"
+    echo "  -y, --yes    Do not ask for confirmation"
+    echo "  -h, --help   Show this help"
+}
+
+function backupctl::usage::snapshots {
+    local error_msg="${1:-}"
+
+    if [[ -n "${error_msg}" ]]; then
+        echo "${error_msg}" >&2
+        echo >&2
+    fi
+
+    echo "Usage: backupctl snapshots [options] PROFILE"
+    echo
+    echo "Description:"
+    echo "  Lists all available versions from a backup target."
+    echo
+    echo "Arguments:"
+    echo "  PROFILE      Name of the backup target"
+    echo
+    echo "Options:"
+    echo "  -h, --help   Show this help"
+}
+
+function backupctl::usage::profiles {
+    local error_msg="${1:-}"
+
+    if [[ -n "${error_msg}" ]]; then
+        echo "${error_msg}" >&2
+        echo >&2
+    fi
+
+    echo "Usage: backupctl profiles [options]"
+    echo
+    echo "Description:"
+    echo "  Lists all backup targets."
+    echo
+    echo "Options:"
+    echo "  -h, --help   Show this help"
+}
+
+function backupctl::usage::forget {
+    local error_msg="${1:-}"
+
+    if [[ -n "${error_msg}" ]]; then
+        echo "${error_msg}" >&2
+        echo >&2
+    fi
+
+    echo "Usage: backupctl forget [options] PROFILE"
+    echo "       backupctl forget [options] --all"
+    echo
+    echo "Description:"
+    echo "  Removes old versions from a backup target."
+    echo "  Either a single PROFILE or --all must be given."
+    echo
+    echo "Arguments:"
+    echo "  PROFILE      Name of the backup target to clean up"
+    echo
+    echo "Options:"
+    echo "  --all           Clean up all configured backup targets"
+    echo "  --keep COUNT    Amount of versions to keep"
+    echo "  --dry-run       Only show which versions would be removed"
+    echo "  -h, --help      Show this help"
+}
+
+function backupctl::main {
+    case "${1:-help}" in
+    backup)
+        shift
+        ;;
+    restore)
+        shift
+        ;;
+    prune)
+        shift
+        ;;
+    snapshots)
+        shift
+        ;;
+    profiles)
+        shift
+        ;;
+    forget)
+        shift
+        ;;
+    help | --help | -h)
+        backupctl::usage
+        exit 0
+        ;;
+    *)
+        backupctl::usage "Unknown command: $1"
+        exit 1
+        ;;
+    esac
+}
+
+# make this script sourceable
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+  backupctl::main "$@"
+fi
