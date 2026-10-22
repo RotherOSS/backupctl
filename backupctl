@@ -159,6 +159,7 @@ function backupctl::main {
     case "${1:-help}" in
     backup)
         shift
+        backupctl::cmd::backup "$@"
         ;;
     restore)
         shift
@@ -184,6 +185,91 @@ function backupctl::main {
         exit 1
         ;;
     esac
+}
+
+# Fills the given array with all configured backup profiles
+function backupctl::config::profiles {
+  local -r file="backupctl.yml"
+  local -n profiles=${1}
+  mapfile -t profiles < <(yq ".profiles | keys | .[]" ${file})
+}
+
+function backupctl::cmd::backup {
+  local -r file="backupctl.yml"
+  local all=0
+  local -a profiles=()
+  local type
+
+  # Parse all parameters
+  while [[ "$#" -gt 0 ]]; do
+    case "${1}" in
+      -h | --help)
+        backupctl::usage::backup
+        exit 0
+        ;;
+      --all)
+        all=1
+        # Fill array with all profiles
+        backupctl::config::backup profiles
+        shift 1
+        ;;
+      -*)
+        backupctl::usage::backup "Unknown parameter: $1"
+        exit 1
+        ;;
+      *)
+        profiles+=("${1}")
+        shift
+        ;;
+    esac
+  done
+
+  # Check if both manual backup targets and '--all' are present
+  if [[ "${all}" -eq 1 ]] && [[ -n "${profiles}" ]]; then
+    backupctl::usage::backup "PROFILE and '--all' are mutually exclusive"
+    exit 1
+  fi
+
+  # Check if a target or 'all' is given
+  if [[ ${all} -eq 0 ]] && [[ -z ${profiles} ]]; then
+    backupctl::usage::backup "Either PROFILE or '--all' must be given"
+    exit 1
+  fi
+
+  # Loop through all backup targets
+  for i in "${profiles[@]}"
+  do
+
+    # Check if profile exists in config
+    if ! yq -e ".profiles | has(\"${i}\")" "${file}" >/dev/null; then
+      echo "Profile '${i}' doesn't exist in config file. Skipping..."
+      continue
+    fi
+
+    # Parse type from config
+    if ! yq -e ".profiles.${i} | has(\"type\")" "${file}" >/dev/null; then
+      echo "Type is required for profile '${i}'. Skipping..."
+      continue
+    fi
+
+    type=$(yq ".profiles.${i}.type" "${file}")
+
+    # Check required parameters depending on the type
+    case "${type}" in
+      dir)
+        ;;
+      postgres)
+        ;;
+      mariadb)
+        ;;
+      *)
+        echo "Invalid type '${type}' for profile '${i}'. Skipping..."
+        continue
+        ;;
+    esac
+
+  done
+
 }
 
 # make this script sourceable
